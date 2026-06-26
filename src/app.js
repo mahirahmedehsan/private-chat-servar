@@ -33,9 +33,18 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const httpServer = createServer(app)
 
+const allowedOrigins = [
+  config.clientUrl,
+  'http://localhost:5173',
+  'http://localhost:3000',
+]
+
 const io = new Server(httpServer, {
   cors: {
-    origin: config.clientUrl,
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+      cb(null, false)
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -69,7 +78,14 @@ app.use(
     },
   })
 )
-app.use(cors({ origin: config.clientUrl, credentials: true }))
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true)
+    if (allowedOrigins.includes(origin)) return cb(null, true)
+    cb(null, false)
+  },
+  credentials: true,
+}))
 app.use(process.env.NODE_ENV === 'production' ? morgan('combined') : morgan('dev'))
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
@@ -88,6 +104,19 @@ app.use('/api/notes', noteRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/account', accountRoutes)
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
+
+app.get('/', (req, res) => {
+  res.json({
+    name: 'PrivateChat API',
+    version: '1.0.0',
+    status: 'running',
+    clientUrl: config.clientUrl,
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth/{google,register,login,refresh,logout}',
+    },
+  })
+})
 
 app.get('/api/health', (req, res) => {
   res.set('Cache-Control', 'no-store')
