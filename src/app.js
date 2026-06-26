@@ -147,7 +147,12 @@ async function start() {
   })
 }
 
-if (!process.env.VERCEL) {
+// On Vercel, initialize services but don't start the HTTP listener
+if (process.env.VERCEL) {
+  connectDB().catch(() => {})
+  getRedis()
+  getFirebaseAdmin()
+} else {
   start()
 }
 
