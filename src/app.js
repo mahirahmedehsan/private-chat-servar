@@ -118,6 +118,9 @@ async function start() {
   })
 }
 
-start()
+if (!process.env.VERCEL) {
+  start()
+}
 
-export { app, httpServer, io }
+export default app
+export { httpServer, io }
