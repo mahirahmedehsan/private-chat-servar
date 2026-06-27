@@ -83,51 +83,21 @@ export function setupSocketHandlers(io) {
 
     socket.on('chat:send', async (data) => {
       const { to, text, conversationId, messageId, timestamp, file, encryptedContent } = data
-      try {
-        const cid = conversationId || getConversationId(uid, to)
+      const cid = conversationId || getConversationId(uid, to)
 
-        const messageDoc = {
-          conversationId: cid,
-          senderId: uid,
-          text: text || '',
-        }
+      // Relay to recipient — REST API already saved the message
+      io.to(to).emit('chat:receive', {
+        _id: messageId,
+        conversationId: cid,
+        senderId: uid,
+        text: text || '',
+        encryptedContent,
+        file,
+        createdAt: timestamp || new Date().toISOString(),
+        reactions: [],
+      })
 
-        if (encryptedContent) {
-          messageDoc.encryptedContent = encryptedContent
-          messageDoc.text = ''
-        }
-
-        if (file) {
-          messageDoc.file = file
-        }
-
-        const message = await Message.create(messageDoc)
-
-        const sentPayload = {
-          ...message.toObject(),
-          messageId: message._id,
-        }
-
-        io.to(to).emit('chat:receive', sentPayload)
-        socket.emit('chat:sent', {
-          conversationId: cid,
-          messageId,
-          _id: message._id,
-        })
-
-        const fromUser = await User.findOne({ uid }).select('displayName').lean()
-        const notif = await Notification.create({
-          userId: to,
-          type: 'new_message',
-          payload: {
-            from: uid,
-            message: `${fromUser?.displayName || uid}: ${(encryptedContent ? '🔒 Encrypted message' : (text || '')).slice(0, 80)}`,
-          },
-        })
-        io.to(to).emit('notification:new', notif)
-      } catch (err) {
-        socket.emit('chat:error', { messageId, error: err.message })
-      }
+      socket.emit('chat:sent', { conversationId: cid, messageId })
     })
 
     socket.on('e2ee:key-update', async (data) => {

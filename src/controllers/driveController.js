@@ -10,6 +10,7 @@ export async function setup(req, res, next) {
     res.json(folders)
   } catch (error) {
     if (error.response?.status === 403) {
+      console.warn(`Drive 403: ${error.message}`)
       return res
         .status(403)
         .json({ error: { message: 'Drive API access denied. Check permissions.' } })

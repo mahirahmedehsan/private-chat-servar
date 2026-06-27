@@ -9,7 +9,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import config from './config/index.js'
 import User from './models/User.js'
-import { connectDB } from './config/db.js'
+import { connectDB, isDBConnected } from './config/db.js'
 import { getRedis, isRedisReady } from './config/redis.js'
 import { getFirebaseAdmin } from './config/firebase.js'
 import authRoutes from './routes/auth.js'
@@ -25,6 +25,7 @@ import uploadRoutes from './routes/upload.js'
 import accountRoutes from './routes/account.js'
 import { setupSocketHandlers } from './sockets/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { requireDB } from './middleware/db.js'
 import { apiLimiter } from './middleware/rateLimiter.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -99,16 +100,16 @@ app.use(cookieParser())
 app.use('/api', apiLimiter)
 
 app.use('/api/auth', authRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/friends', friendRoutes)
-app.use('/api/sync', syncRoutes)
-app.use('/api/notifications', notificationRoutes)
-app.use('/api/drive', driveRoutes)
-app.use('/api/presence', presenceRoutes)
-app.use('/api/messages', messageRoutes)
-app.use('/api/notes', noteRoutes)
-app.use('/api/upload', uploadRoutes)
-app.use('/api/account', accountRoutes)
+app.use('/api/users', requireDB, userRoutes)
+app.use('/api/friends', requireDB, friendRoutes)
+app.use('/api/sync', requireDB, syncRoutes)
+app.use('/api/notifications', requireDB, notificationRoutes)
+app.use('/api/drive', requireDB, driveRoutes)
+app.use('/api/presence', requireDB, presenceRoutes)
+app.use('/api/messages', requireDB, messageRoutes)
+app.use('/api/notes', requireDB, noteRoutes)
+app.use('/api/upload', requireDB, uploadRoutes)
+app.use('/api/account', requireDB, accountRoutes)
 const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.resolve(__dirname, '../uploads')
 app.use('/uploads', express.static(uploadsDir))
 
@@ -130,6 +131,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    mongodb: isDBConnected() ? 'connected' : 'unavailable',
     redis: isRedisReady() ? 'connected' : 'unavailable',
     uptime: process.uptime(),
   })
@@ -163,9 +165,16 @@ if (process.env.VERCEL) {
 
   app.use((req, res, next) => {
     if (req.url.startsWith('/socket.io/')) {
+      if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin || config.clientUrl)
+        res.setHeader('Access-Control-Allow-Credentials', 'true')
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        return res.status(204).end()
+      }
       const engine = io?.engine
       if (engine) {
-        res.setHeader('Access-Control-Allow-Origin', config.clientUrl)
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin || config.clientUrl)
         res.setHeader('Access-Control-Allow-Credentials', 'true')
         return engine.handleRequest(req, res)
       }
