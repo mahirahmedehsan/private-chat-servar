@@ -35,8 +35,8 @@ const httpServer = createServer(app)
 
 const allowedOrigins = config.clientUrl
   ? config.clientUrl.split(',').map((s) => s.trim()).filter(Boolean)
-  : ['http://localhost:5173']
-allowedOrigins.push('http://localhost:5173', 'http://localhost:3000')
+  : ['http://localhost:5173', 'https://private-chat-delta-weld.vercel.app']
+allowedOrigins.push('http://localhost:5173', 'http://localhost:3000', 'https://private-chat-delta-weld.vercel.app')
 
 const io = new Server(httpServer, {
   cors: {
@@ -68,7 +68,7 @@ app.use(
     },
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin' },
-    crossOriginResourcePolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     hsts: {
       maxAge: 31536000,
