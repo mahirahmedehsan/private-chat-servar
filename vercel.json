@@ -2,7 +2,11 @@
   "builds": [
     {
       "src": "src/app.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30,
+        "memory": 512
+      }
     }
   ],
   "routes": [

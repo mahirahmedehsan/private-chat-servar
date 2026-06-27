@@ -1,6 +1,7 @@
 import User from '../models/User.js'
 import Note from '../models/Note.js'
 import Friend from '../models/Friend.js'
+import { getCached, setCache, clearCache } from '../utils/cache.js'
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -8,8 +9,13 @@ function escapeRegex(str) {
 
 export async function getProfile(req, res, next) {
   try {
+    const cacheKey = `profile:${req.user.uid}`
+    const cached = getCached(cacheKey)
+    if (cached) return res.json(cached)
+
     const user = await User.findOne({ uid: req.user.uid }).select('-__v')
     if (!user) return res.status(404).json({ error: { message: 'User not found' } })
+    setCache(cacheKey, user, 15000)
     res.json(user)
   } catch (error) {
     next(error)
@@ -36,6 +42,9 @@ export async function updateProfile(req, res, next) {
     if (['public', 'friends', 'only_me'].includes(req.body.genderVisibility)) updates.genderVisibility = req.body.genderVisibility
 
     const user = await User.findOneAndUpdate({ uid: req.user.uid }, updates, { new: true })
+
+    clearCache(`profile:${req.user.uid}`)
+    clearCache(`stats:${req.user.uid}`)
 
     const io = req.app.get('io')
     if (io) {
@@ -151,6 +160,10 @@ export async function getUserProfile(req, res, next) {
 export async function getProfileStats(req, res, next) {
   try {
     const uid = req.user.uid
+    const cacheKey = `stats:${uid}`
+    const cached = getCached(cacheKey)
+    if (cached) return res.json(cached)
+
     const [postCount, friendCount, notes] = await Promise.all([
       Note.countDocuments({ author: uid }),
       Friend.countDocuments({
@@ -164,7 +177,9 @@ export async function getProfileStats(req, res, next) {
       return sum + (n.reactions || []).reduce((s, r) => s + r.userIds.length, 0)
     }, 0)
 
-    res.json({ postCount, friendCount, totalLikes })
+    const result = { postCount, friendCount, totalLikes }
+    setCache(cacheKey, result, 30000)
+    res.json(result)
   } catch (error) {
     next(error)
   }

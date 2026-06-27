@@ -119,4 +119,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
+userSchema.index({ status: 1 })
+
 export default mongoose.model('User', userSchema)

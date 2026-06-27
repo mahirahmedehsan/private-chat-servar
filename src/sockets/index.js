@@ -66,11 +66,17 @@ export function setupSocketHandlers(io) {
 
     socket.emit('e2ee:key', { publicKey: userData?.publicKey || null })
 
-    for (const otherUid of onlineUsers) {
-      if (otherUid !== uid) {
-        const otherUserData = await User.findOne({ uid: otherUid }).select('hideOnlineStatus').lean()
-        if (!otherUserData?.hideOnlineStatus) {
-          socket.emit('presence:update', { uid: otherUid, status: 'online' })
+    if (onlineUsers.size > 0) {
+      const otherUids = [...onlineUsers].filter(id => id !== uid)
+      if (otherUids.length > 0) {
+        const otherUsers = await User.find(
+          { uid: { $in: otherUids } },
+          'uid hideOnlineStatus'
+        ).lean()
+        for (const u of otherUsers) {
+          if (!u.hideOnlineStatus) {
+            socket.emit('presence:update', { uid: u.uid, status: 'online' })
+          }
         }
       }
     }

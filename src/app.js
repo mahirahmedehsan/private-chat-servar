@@ -47,8 +47,15 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
-  pingInterval: 25000,
-  pingTimeout: 20000,
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  transports: ['polling', 'websocket'],
+  allowEIO3: true,
+  cookie: {
+    name: 'io',
+    httpOnly: true,
+    sameSite: 'strict',
+  },
 })
 
 app.use(
@@ -154,13 +161,15 @@ if (process.env.VERCEL) {
   getRedis()
   getFirebaseAdmin()
 
-  // Forward /socket.io polling requests to engine.io
   app.use((req, res, next) => {
     if (req.url.startsWith('/socket.io/')) {
       const engine = io?.engine
       if (engine) {
+        res.setHeader('Access-Control-Allow-Origin', config.clientUrl)
+        res.setHeader('Access-Control-Allow-Credentials', 'true')
         return engine.handleRequest(req, res)
       }
+      return res.status(503).json({ error: 'Socket engine not ready' })
     }
     next()
   })

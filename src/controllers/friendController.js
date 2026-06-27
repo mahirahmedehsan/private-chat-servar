@@ -1,6 +1,7 @@
 import Friend from '../models/Friend.js'
 import User from '../models/User.js'
 import Notification from '../models/Notification.js'
+import { getCached, setCache } from '../utils/cache.js'
 
 export async function getFriends(req, res, next) {
   try {
@@ -145,14 +146,16 @@ export async function blockUser(req, res, next) {
     const { id } = req.params
     const { duration } = req.body
     const blockedUntil = duration ? new Date(Date.now() + duration * 60 * 1000) : null
+
     await User.findOneAndUpdate(
-      { uid: req.user.uid, 'blockedUsers.uid': id },
-      { $set: { 'blockedUsers.$.blockedUntil': blockedUntil } }
+      { uid: req.user.uid },
+      { $pull: { blockedUsers: { uid: id } } }
     )
     await User.findOneAndUpdate(
-      { uid: req.user.uid, 'blockedUsers.uid': { $ne: id } },
+      { uid: req.user.uid },
       { $push: { blockedUsers: { uid: id, blockedUntil } } }
     )
+
     res.json({ message: 'User blocked', blockedUntil })
   } catch (error) {
     next(error)
@@ -175,17 +178,23 @@ export async function unblockUser(req, res, next) {
 export async function getFriendStatus(req, res, next) {
   try {
     const { id } = req.params
+    const cacheKey = `friendStatus:${req.user.uid}:${id}`
+    const cached = getCached(cacheKey)
+    if (cached) return res.json(cached)
+
     const [me, them] = await Promise.all([
       User.findOne({ uid: req.user.uid }).select('blockedUsers').lean(),
       User.findOne({ uid: id }).select('blockedUsers').lean(),
     ])
     const myBlock = (me?.blockedUsers || []).find((b) => b.uid === id)
     const theirBlock = (them?.blockedUsers || []).find((b) => b.uid === req.user.uid)
-    res.json({
+    const result = {
       blockedByMe: myBlock ? isBlockActive(myBlock) : false,
       blockedByThem: theirBlock ? isBlockActive(theirBlock) : false,
       blockedUntil: myBlock?.blockedUntil || null,
-    })
+    }
+    setCache(cacheKey, result, 10000)
+    res.json(result)
   } catch (error) {
     next(error)
   }

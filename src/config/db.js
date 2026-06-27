@@ -5,9 +5,14 @@ let isConnected = false
 
 export async function connectDB() {
   try {
+    mongoose.set('strictQuery', true)
     await mongoose.connect(config.mongodb.uri, {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      socketTimeoutMS: 30000,
+      waitQueueTimeoutMS: 5000,
     })
     isConnected = true
     console.log('MongoDB connected')

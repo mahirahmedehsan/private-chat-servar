@@ -99,12 +99,7 @@ export async function googleAuth(req, res, next) {
     }
 
     if (!user.driveFolderId && googleAccessToken) {
-      try {
-        const folders = await driveService.setupAppFolders(uid, googleAccessToken)
-        user = await User.findOne({ uid })
-      } catch {
-        // Drive setup failed — non-blocking; user can still use the app
-      }
+      driveService.setupAppFolders(uid, googleAccessToken).catch(() => {})
     }
 
     return user
