@@ -1,19 +1,18 @@
 import nacl from 'tweetnacl'
 import { encodeBase64, decodeBase64, encodeUTF8, decodeUTF8 } from 'tweetnacl-util'
-import bs58 from 'bs58'
 
 export function generateKeyPair() {
   const keyPair = nacl.box.keyPair()
   return {
-    publicKey: bs58.encode(keyPair.publicKey),
-    secretKey: bs58.encode(keyPair.secretKey),
+    publicKey: encodeBase64(keyPair.publicKey),
+    secretKey: encodeBase64(keyPair.secretKey),
   }
 }
 
 export function encryptMessage(text, recipientPublicKey, senderSecretKey) {
   const ephemeralKeyPair = nacl.box.keyPair()
-  const recipientPub = bs58.decode(recipientPublicKey)
-  const senderSecret = bs58.decode(senderSecretKey)
+  const recipientPub = decodeBase64(recipientPublicKey)
+  const senderSecret = decodeBase64(senderSecretKey)
   const nonce = nacl.randomBytes(nacl.box.nonceLength)
   const messageBytes = decodeUTF8(text)
   const encrypted = nacl.box(messageBytes, nonce, recipientPub, senderSecret)
@@ -30,8 +29,8 @@ export function decryptMessage(encryptedData, senderPublicKey, recipientSecretKe
   try {
     const encrypted = decodeBase64(encryptedData.encrypted)
     const nonce = decodeBase64(encryptedData.nonce)
-    const senderPub = bs58.decode(senderPublicKey)
-    const recipientSecret = bs58.decode(recipientSecretKey)
+    const senderPub = decodeBase64(senderPublicKey)
+    const recipientSecret = decodeBase64(recipientSecretKey)
 
     const decrypted = nacl.box.open(encrypted, nonce, senderPub, recipientSecret)
     if (!decrypted) return null

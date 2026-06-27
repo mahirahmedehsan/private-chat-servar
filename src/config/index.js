@@ -41,5 +41,5 @@ export default {
     serviceAccountSubject: process.env.GOOGLE_SERVICE_ACCOUNT_SUBJECT,
   },
 
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
 }

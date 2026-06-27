@@ -25,7 +25,7 @@ import uploadRoutes from './routes/upload.js'
 import accountRoutes from './routes/account.js'
 import { setupSocketHandlers } from './sockets/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
-import { apiLimiter, authLimiter } from './middleware/rateLimiter.js'
+import { apiLimiter } from './middleware/rateLimiter.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -33,11 +33,10 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const httpServer = createServer(app)
 
-const allowedOrigins = [
-  config.clientUrl,
-  'http://localhost:5173',
-  'http://localhost:3000',
-]
+const allowedOrigins = config.clientUrl
+  ? config.clientUrl.split(',').map((s) => s.trim()).filter(Boolean)
+  : ['http://localhost:5173']
+allowedOrigins.push('http://localhost:5173', 'http://localhost:3000')
 
 const io = new Server(httpServer, {
   cors: {
@@ -103,7 +102,8 @@ app.use('/api/messages', messageRoutes)
 app.use('/api/notes', noteRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/account', accountRoutes)
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
+const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.resolve(__dirname, '../uploads')
+app.use('/uploads', express.static(uploadsDir))
 
 app.get('/', (req, res) => {
   res.json({
@@ -147,11 +147,23 @@ async function start() {
   })
 }
 
-// On Vercel, initialize services but don't start the HTTP listener
+// On Vercel, initialize services and attach Socket.io engine to Express
+// so HTTP long-polling works (WebSocket transport is not available on Vercel)
 if (process.env.VERCEL) {
   connectDB().catch(() => {})
   getRedis()
   getFirebaseAdmin()
+
+  // Forward /socket.io polling requests to engine.io
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/socket.io/')) {
+      const engine = io?.engine
+      if (engine) {
+        return engine.handleRequest(req, res)
+      }
+    }
+    next()
+  })
 } else {
   start()
 }
