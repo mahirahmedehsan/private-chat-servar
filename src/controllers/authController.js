@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import config from '../config/index.js'
 import { getAuth } from '../config/firebase.js'
 import User from '../models/User.js'
-import * as driveService from '../services/googleDriveServiceAccount.js'
+import * as driveService from '../services/googleDrive.js'
 
 function generateTokens(user) {
   const accessToken = jwt.sign(
@@ -59,7 +59,7 @@ async function verifyAndRespond(req, res, next, findOrCreate) {
       return res.status(500).json({ error: { message: 'Firebase not configured' } })
     }
 
-    const { idToken } = req.body
+    const { idToken, googleAccessToken } = req.body
     if (!idToken) {
       return res.status(400).json({ error: { message: 'ID token required' } })
     }
@@ -67,7 +67,7 @@ async function verifyAndRespond(req, res, next, findOrCreate) {
     const decoded = await firebaseAuth.verifyIdToken(idToken)
     const { uid, email, name, picture } = decoded
 
-    const user = await findOrCreate(uid, email, name || email?.split('@')[0], picture)
+    const user = await findOrCreate(uid, email, name || email?.split('@')[0], picture, googleAccessToken)
     if (!user) return
 
     const tokens = generateTokens(user)
@@ -76,6 +76,7 @@ async function verifyAndRespond(req, res, next, findOrCreate) {
     res.json({
       user: sanitizeUser(user),
       accessToken: tokens.accessToken,
+      googleAccessToken: user.googleAccessToken || null,
     })
   } catch (error) {
     if (error.code === 'auth/id-token-expired') {
@@ -86,19 +87,20 @@ async function verifyAndRespond(req, res, next, findOrCreate) {
 }
 
 export async function googleAuth(req, res, next) {
-  return verifyAndRespond(req, res, next, async (uid, email, displayName, photoURL) => {
+  return verifyAndRespond(req, res, next, async (uid, email, displayName, photoURL, googleAccessToken) => {
     let user = await User.findOne({ uid })
     if (!user) {
-      user = await User.create({ uid, email, displayName, photoURL })
+      user = await User.create({ uid, email, displayName, photoURL, googleAccessToken })
     } else {
       user.displayName = displayName || user.displayName
       if (photoURL) user.photoURL = photoURL
+      if (googleAccessToken) user.googleAccessToken = googleAccessToken
       await user.save()
     }
 
-    if (!user.driveFolderId) {
+    if (!user.driveFolderId && googleAccessToken) {
       try {
-        const folders = await driveService.setupAppFolders(uid)
+        const folders = await driveService.setupAppFolders(uid, googleAccessToken)
         user = await User.findOne({ uid })
       } catch {
         // Drive setup failed — non-blocking; user can still use the app

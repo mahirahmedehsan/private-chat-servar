@@ -4,7 +4,7 @@ import Friend from '../models/Friend.js'
 import Note from '../models/Note.js'
 import Notification from '../models/Notification.js'
 import SyncMetadata from '../models/SyncMetadata.js'
-import { deleteUserFolder } from '../services/googleDriveServiceAccount.js'
+import { deleteUserFolder } from '../services/googleDrive.js'
 
 export async function deleteAccount(req, res, next) {
   try {
@@ -41,7 +41,10 @@ export async function deleteAccount(req, res, next) {
         SyncMetadata.deleteMany({ userId: uid }),
       ])
 
-    await deleteUserFolder(uid)
+    const userData = await User.findOne({ uid }).select('googleAccessToken').lean()
+    if (userData?.googleAccessToken) {
+      await deleteUserFolder(uid, userData.googleAccessToken)
+    }
 
     await User.deleteOne({ uid })
 

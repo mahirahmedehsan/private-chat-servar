@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema(
       type: Object,
       default: null,
     },
+    googleAccessToken: {
+      type: String,
+      default: null,
+    },
     publicKey: {
       type: String,
       default: null,
