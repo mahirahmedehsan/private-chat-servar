@@ -27,9 +27,11 @@ export async function uploadFile(req, res, next) {
       data: req.file.buffer,
     })
 
+    const baseUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`
+
     res.json({
       _id: file._id.toString(),
-      url: `/api/files/${file._id}`,
+      url: `${baseUrl}/api/files/${file._id}`,
       name: req.file.originalname,
       type: req.file.mimetype,
       size: req.file.size,
