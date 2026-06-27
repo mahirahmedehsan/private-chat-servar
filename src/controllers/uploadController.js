@@ -1,25 +1,7 @@
 import multer from 'multer'
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
+import File from '../models/File.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-// On Vercel the filesystem is ephemeral — use /tmp for uploaded files
-const uploadDir = process.env.VERCEL
-  ? '/tmp/uploads'
-  : path.resolve(__dirname, '../../uploads')
-
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname)
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`)
-  },
-})
+const storage = multer.memoryStorage()
 
 function fileFilter(req, file, cb) {
   const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
@@ -32,14 +14,27 @@ function fileFilter(req, file, cb) {
 
 export const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } })
 
-export function uploadFile(req, res) {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' })
+export async function uploadFile(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+
+    const file = await File.create({
+      name: req.file.originalname,
+      type: req.file.mimetype,
+      size: req.file.size,
+      data: req.file.buffer,
+    })
+
+    res.json({
+      _id: file._id.toString(),
+      url: `/api/files/${file._id}`,
+      name: req.file.originalname,
+      type: req.file.mimetype,
+      size: req.file.size,
+    })
+  } catch (error) {
+    next(error)
   }
-  res.json({
-    url: `/uploads/${req.file.filename}`,
-    name: req.file.originalname,
-    size: req.file.size,
-    mimetype: req.file.mimetype,
-  })
 }
