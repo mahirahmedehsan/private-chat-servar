@@ -7,6 +7,15 @@ const __dirname = dirname(__filename)
 
 dotenv.config({ path: resolve(__dirname, '../../.env') })
 
+// Warn about missing critical env vars on Vercel
+if (process.env.VERCEL) {
+  const required = ['MONGODB_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY']
+  const missing = required.filter(k => !process.env[k])
+  if (missing.length) {
+    console.warn(`Missing Vercel env vars: ${missing.join(', ')}`)
+  }
+}
+
 export default {
   port: parseInt(process.env.PORT, 10) || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
