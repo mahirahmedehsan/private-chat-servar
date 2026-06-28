@@ -23,4 +23,9 @@ router.get('/messages/:conversationId', adminController.getConversationMessages)
 router.post('/messages', adminController.sendMessageAsAdmin)
 router.delete('/messages/:id', adminController.deleteMessage)
 
+// Help Line
+router.get('/help-line/conversations', adminController.getHelpConversations)
+router.get('/help-line/messages/:userId', adminController.getAdminHelpMessages)
+router.post('/help-line/messages/:userId', adminController.sendAdminHelpResponse)
+
 export default router

@@ -3,6 +3,13 @@ import Note from '../models/Note.js'
 import Message from '../models/Message.js'
 import Report from '../models/Report.js'
 import Notification from '../models/Notification.js'
+import {
+  getHelpConversations,
+  getAdminHelpMessages,
+  sendAdminHelpResponse,
+} from './helpLineController.js'
+
+export { getHelpConversations, getAdminHelpMessages, sendAdminHelpResponse }
 
 export async function getStats(req, res, next) {
   try {
