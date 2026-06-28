@@ -77,6 +77,7 @@ export async function getFeed(req, res, next) {
     const enriched = notes.map((n) => ({
       ...n,
       author: authorMap[n.author] || { uid: n.author, displayName: n.author, photoURL: null },
+      isFriend: friendIds.has(n.author),
       comments: n.comments.map((c) => ({
         ...c,
         author: authorMap[c.author] || { uid: c.author, displayName: c.author, photoURL: null },
