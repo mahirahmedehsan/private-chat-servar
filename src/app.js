@@ -101,7 +101,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(cookieParser())
 app.use('/api', apiLimiter)
 
-app.use('/api/auth', authRoutes)
+app.use('/api/auth', requireDB, authRoutes)
 app.use('/api/users', requireDB, userRoutes)
 app.use('/api/friends', requireDB, friendRoutes)
 app.use('/api/sync', requireDB, syncRoutes)
