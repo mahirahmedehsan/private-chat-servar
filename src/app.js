@@ -24,6 +24,7 @@ import noteRoutes from './routes/notes.js'
 import uploadRoutes from './routes/upload.js'
 import fileRoutes from './routes/files.js'
 import accountRoutes from './routes/account.js'
+import adminRoutes from './routes/admin.js'
 import { setupSocketHandlers } from './sockets/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { requireDB } from './middleware/db.js'
@@ -112,6 +113,7 @@ app.use('/api/notes', requireDB, noteRoutes)
 app.use('/api/upload', requireDB, uploadRoutes)
 app.use('/api/files', fileRoutes)
 app.use('/api/account', requireDB, accountRoutes)
+app.use('/api/admin', requireDB, adminRoutes)
 const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.resolve(__dirname, '../uploads')
 app.use('/uploads', express.static(uploadsDir))
 

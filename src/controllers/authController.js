@@ -6,7 +6,7 @@ import * as driveService from '../services/googleDrive.js'
 
 function generateTokens(user) {
   const accessToken = jwt.sign(
-    { uid: user.uid, email: user.email },
+    { uid: user.uid, email: user.email, role: user.role || 'user' },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn }
   )
@@ -49,6 +49,7 @@ function sanitizeUser(user) {
     addressVisibility: user.addressVisibility || 'public',
     birthdayVisibility: user.birthdayVisibility || 'public',
     genderVisibility: user.genderVisibility || 'public',
+    role: user.role || 'user',
   }
 }
 

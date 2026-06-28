@@ -111,6 +111,15 @@ const userSchema = new mongoose.Schema(
       enum: ['public', 'friends', 'only_me'],
       default: 'public',
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
+    banned: {
+      type: Boolean,
+      default: false,
+    },
     blockedUsers: [{
       uid: { type: String },
       blockedUntil: { type: Date, default: null },
