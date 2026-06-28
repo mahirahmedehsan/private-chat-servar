@@ -154,6 +154,16 @@ export async function refreshToken(req, res, next) {
   }
 }
 
+export async function getMe(req, res, next) {
+  try {
+    const user = await User.findOne({ uid: req.user.uid }).lean()
+    if (!user) return res.status(404).json({ error: { message: 'User not found' } })
+    res.json({ user: sanitizeUser(user) })
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function logout(req, res) {
   res.clearCookie('refreshToken', { path: '/api/auth' })
   res.json({ message: 'Logged out successfully' })
