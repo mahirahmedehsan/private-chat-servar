@@ -5,6 +5,10 @@ import * as adminController from '../controllers/adminController.js'
 
 const router = Router()
 
+// createReport is public (any authenticated user can report)
+router.post('/reports', authenticate, adminController.createReport)
+
+// Everything else requires admin
 router.use(authenticate, requireAdmin)
 
 router.get('/stats', adminController.getStats)
@@ -14,7 +18,6 @@ router.post('/users/:uid/ban', adminController.toggleBanUser)
 router.get('/notes', adminController.getNotes)
 router.delete('/notes/:id', adminController.deleteNote)
 router.get('/reports', adminController.getReports)
-router.post('/reports', adminController.createReport)
 router.put('/reports/:id', adminController.resolveReport)
 router.get('/messages/:conversationId', adminController.getConversationMessages)
 router.post('/messages', adminController.sendMessageAsAdmin)
